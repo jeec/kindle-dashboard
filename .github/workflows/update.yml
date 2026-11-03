@@ -2,7 +2,7 @@ name: Update Kindle dashboard
 
 on:
   schedule:
-    - cron: "17 * * * *"      # every hour at minute 17 (UTC); GitHub may delay it a few minutes
+    - cron: "*/15 * * * *"      # every hour at minute 17 (UTC); GitHub may delay it a few minutes
   workflow_dispatch:           # lets you run it by hand from the Actions tab
   push:
     branches: [main]
