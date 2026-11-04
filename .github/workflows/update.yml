@@ -2,7 +2,7 @@ name: Update Kindle dashboard
 
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *" 
+    - cron: "7 * * * *" 
   workflow_dispatch:           # lets you run it by hand from the Actions tab
   push:
     branches: [main]
