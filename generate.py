@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 
 from PIL import Image, ImageDraw, ImageFont
 
-W, H = 1072, 1448  # Kindle Paperwhite 3, 300 ppi, portrait
+W, H = 1448, 1072  # Kindle Paperwhite 3, 300 ppi, landscape
 M = 64
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "site")
@@ -175,28 +175,28 @@ def render(data, cfg, now):
     cur, hourly, daily = data["current"], data["hourly"], data["daily"]
     city = data["_city"]
 
-    # header
-    d.text((M, 56), f"{now.month}月{now.day}日", font=F("Bold", 96), fill=BLACK)
-    d.text((M, 186), f"星期{WEEK[now.weekday()]}  ·  {city}", font=F("Regular", 42), fill=MID)
-    d.line([M, 262, W - M, 262], fill=BLACK, width=4)
+    # Header
+    d.text((M, 42), f"{now.month}月{now.day}日", font=F("Bold", 76), fill=BLACK)
+    d.text((M, 132), f"星期{WEEK[now.weekday()]}  ·  {city}", font=F("Regular", 36), fill=MID)
+    d.line([M, 194, W - M, 194], fill=BLACK, width=4)
 
-    # current conditions
+    # Current conditions, left column
     text, kind = wmo(cur["weather_code"])
-    draw_icon(d, kind, M + 130, 430, 260)
+    draw_icon(d, kind, 230, 352, 250)
     temp = f"{round(cur['temperature_2m'])}°"
-    f_temp = F("Bold", 250)
-    d.text((M + 300, 290), temp, font=f_temp, fill=BLACK)
-    x2 = M + 300 + text_w(d, temp, f_temp) + 30
-    d.text((x2, 372), text, font=F("Bold", 64), fill=BLACK)
-    d.text((x2, 460), f"体感 {round(cur['apparent_temperature'])}°", font=F("Regular", 38), fill=DARK)
-    d.text((M, 590), f"湿度 {round(cur['relative_humidity_2m'])}%   ·   风 {round(cur['wind_speed_10m'])} km/h",
-           font=F("Regular", 38), fill=DARK)
-    d.text((M, 646),
+    f_temp = F("Bold", 190)
+    d.text((410, 245), temp, font=f_temp, fill=BLACK)
+    x2 = 410 + text_w(d, temp, f_temp) + 24
+    d.text((x2, 330), text, font=F("Bold", 52), fill=BLACK)
+    d.text((x2, 405), f"体感 {round(cur['apparent_temperature'])}°", font=F("Regular", 34), fill=DARK)
+    d.text((M, 500), f"湿度 {round(cur['relative_humidity_2m'])}%   ·   风 {round(cur['wind_speed_10m'])} km/h",
+           font=F("Regular", 34), fill=DARK)
+    d.text((M, 558),
            f"今日  最高 {round(daily['temperature_2m_max'][0])}°  最低 {round(daily['temperature_2m_min'][0])}°"
            f"  ·  降水概率 {daily['precipitation_probability_max'][0] or 0}%",
-           font=F("Regular", 38), fill=DARK)
+           font=F("Regular", 30), fill=DARK)
 
-    # Practical timing summary: best near-term rain window and daylight hours.
+    # Practical timing summary
     floor_now = now.replace(minute=0, second=0, microsecond=0, tzinfo=None)
     hourly_times = [dt.datetime.strptime(t, "%Y-%m-%dT%H:%M") for t in hourly["time"]]
     next_hours = [(i, t) for i, t in enumerate(hourly_times) if floor_now <= t < floor_now + dt.timedelta(hours=24)]
@@ -208,64 +208,65 @@ def render(data, cfg, now):
         rain_text = "未来降雨  暂无逐小时数据"
     sunrise = daily.get("sunrise", [None])[0]
     sunset = daily.get("sunset", [None])[0]
-    sun_text = "日出日落  --:-- / --:--"
+    sun_text = f"日出 --:--  ·  日落 --:--"
     if sunrise and sunset:
         sun_text = f"日出 {sunrise[-5:]}  ·  日落 {sunset[-5:]}"
-    d.text((M, 696), rain_text, font=F("Regular", 32), fill=DARK)
-    d.text((M, 734), sun_text, font=F("Regular", 32), fill=DARK)
+    d.text((M, 632), rain_text, font=F("Regular", 32), fill=DARK)
+    d.text((M, 690), sun_text, font=F("Regular", 32), fill=DARK)
 
-    # 24h chart
-    d.text((M, 778), "未来 24 小时", font=F("Bold", 40), fill=BLACK)
-    times = hourly_times
-    start = next((i for i, t in enumerate(times) if t >= floor_now), 0)
-    idx = list(range(start, min(start + 25, len(times))))
+    # 24-hour chart, upper right
+    rx0, rx1 = 770, W - M
+    d.text((rx0, 222), "未来 24 小时", font=F("Bold", 40), fill=BLACK)
+    d.text((rx1 - 270, 232), "灰柱 = 降水概率", font=F("Regular", 26), fill=MID)
+    start = next((i for i, t in enumerate(hourly_times) if t >= floor_now), 0)
+    idx = list(range(start, min(start + 25, len(hourly_times))))
     ts = [hourly["temperature_2m"][i] for i in idx]
     ps = [hourly["precipitation_probability"][i] or 0 for i in idx]
-    cx0, cx1, cy0, cy1 = M + 10, W - M - 10, 835, 965
+    cx0, cx1, cy0, cy1 = rx0 + 12, rx1 - 12, 320, 450
     lo, hi = min(ts), max(ts)
     span = max(hi - lo, 4)
-    xs = [cx0 + (cx1 - cx0) * k / (len(idx) - 1) for k in range(len(idx))]
+    xs = [cx0 + (cx1 - cx0) * k / max(len(idx) - 1, 1) for k in range(len(idx))]
     ys = [cy1 - (cy1 - cy0) * (t - lo) / span for t in ts]
-    bar_base, bar_h = 1050, 56
-    for k, p in enumerate(ps):  # rain probability bars
+    bar_base, bar_h = 510, 52
+    for k, p in enumerate(ps):
         h = bar_h * p / 100
-        d.rectangle([xs[k] - 11, bar_base - h, xs[k] + 11, bar_base], fill=LIGHT)
-    d.line([M, bar_base, W - M, bar_base], fill=MID, width=2)
-    d.line(list(zip(xs, ys)), fill=BLACK, width=6, joint="curve")
-    for k in (ts.index(hi), ts.index(lo)):
-        d.ellipse([xs[k] - 8, ys[k] - 8, xs[k] + 8, ys[k] + 8], fill=BLACK)
+        d.rectangle([xs[k] - 9, bar_base - h, xs[k] + 9, bar_base], fill=LIGHT)
+    d.line([rx0, bar_base, rx1, bar_base], fill=MID, width=2)
+    d.line(list(zip(xs, ys)), fill=BLACK, width=5, joint="curve")
+    for k in set((ts.index(hi), ts.index(lo))):
+        d.ellipse([xs[k] - 7, ys[k] - 7, xs[k] + 7, ys[k] + 7], fill=BLACK)
         label = f"{round(ts[k])}°"
-        f = F("Bold", 36)
-        ty = ys[k] - 54 if k == ts.index(hi) else ys[k] + 14
-        d.text((min(max(xs[k] - text_w(d, label, f) / 2, M), W - M - 60), ty), label, font=f, fill=BLACK)
+        f = F("Bold", 30)
+        ty = ys[k] - 42 if k == ts.index(hi) else ys[k] + 10
+        d.text((min(max(xs[k] - text_w(d, label, f) / 2, rx0), rx1 - 54), ty), label, font=f, fill=BLACK)
     for k in range(0, len(idx), 6):
-        label = f"{times[idx[k]].hour}时"
-        f = F("Regular", 32)
-        d.text((min(max(xs[k] - text_w(d, label, f) / 2, 16), W - 16 - text_w(d, label, f)), bar_base + 12), label, font=f, fill=DARK)
-    d.text((W - M - 250, 784), "灰柱 = 降水概率", font=F("Regular", 28), fill=MID)
+        label = f"{hourly_times[idx[k]].hour}时"
+        f = F("Regular", 26)
+        d.text((min(max(xs[k] - text_w(d, label, f) / 2, rx0), rx1 - text_w(d, label, f)), bar_base + 8), label, font=f, fill=DARK)
 
-    # daily forecast
-    d.line([M, 1128, W - M, 1128], fill=BLACK, width=4)
+    # Five-day forecast, lower right
+    d.line([rx0, 592, rx1, 592], fill=BLACK, width=3)
+    d.text((rx0, 606), "未来 5 天", font=F("Bold", 34), fill=BLACK)
     rows = list(range(1, min(6, len(daily["time"]))))
     tmin = min(daily["temperature_2m_min"][i] for i in rows)
     tmax = max(daily["temperature_2m_max"][i] for i in rows)
-    bx0, bx1 = 640, 880
+    bx0, bx1 = 1150, 1300
     for n, i in enumerate(rows):
-        y = 1152 + n * 46
+        y = 656 + n * 62
         day = dt.datetime.strptime(daily["time"][i], "%Y-%m-%d")
         name = "明天" if i == 1 else f"周{WEEK[day.weekday()]}"
         text_d, kind_d = wmo(daily["weather_code"][i])
-        d.text((M, y), name, font=F("Bold", 32), fill=BLACK)
-        draw_icon(d, kind_d, M + 200, y + 21, 50)
-        d.text((M + 250, y), text_d, font=F("Regular", 32), fill=DARK)
+        d.text((rx0, y), name, font=F("Bold", 28), fill=BLACK)
+        draw_icon(d, kind_d, rx0 + 112, y + 18, 44)
+        d.text((rx0 + 145, y), text_d, font=F("Regular", 26), fill=DARK)
         lo_d, hi_d = daily["temperature_2m_min"][i], daily["temperature_2m_max"][i]
         sx = lambda v: bx0 + (bx1 - bx0) * (v - tmin) / max(tmax - tmin, 1)  # noqa: E731
-        d.line([bx0, y + 21, bx1, y + 21], fill=PALE, width=10)
-        d.line([sx(lo_d), y + 21, sx(hi_d), y + 21], fill=DARK, width=10)
-        d.text((bx0 - 70, y), f"{round(lo_d)}°", font=F("Regular", 32), fill=DARK)
-        d.text((bx1 + 20, y), f"{round(hi_d)}°", font=F("Bold", 32), fill=BLACK)
+        d.text((1060, y), f"{round(lo_d)}°", font=F("Regular", 28), fill=DARK)
+        d.line([bx0, y + 18, bx1, y + 18], fill=PALE, width=9)
+        d.line([sx(lo_d), y + 18, sx(hi_d), y + 18], fill=DARK, width=9)
+        d.text((1320, y), f"{round(hi_d)}°", font=F("Bold", 28), fill=BLACK)
 
-    d.text((M, H - 46), f"更新于 {now.strftime('%H:%M')}  ·  数据来自 Open-Meteo", font=F("Regular", 26), fill=MID)
+    d.text((M, H - 44), f"更新于 {now.strftime('%H:%M')}  ·  数据来自 Open-Meteo", font=F("Regular", 24), fill=MID)
     return img
 
 
