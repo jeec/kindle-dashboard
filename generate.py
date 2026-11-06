@@ -188,13 +188,14 @@ def render(data, cfg, now):
     d.text((410, 245), temp, font=f_temp, fill=BLACK)
     x2 = 410 + text_w(d, temp, f_temp) + 24
     d.text((x2, 330), text, font=F("Bold", 52), fill=BLACK)
-    d.text((x2, 405), f"体感 {round(cur['apparent_temperature'])}°", font=F("Regular", 34), fill=DARK)
-    d.text((M, 500), f"湿度 {round(cur['relative_humidity_2m'])}%   ·   风 {round(cur['wind_speed_10m'])} km/h",
-           font=F("Regular", 34), fill=DARK)
+    d.text((M, 500),
+           f"体感 {round(cur['apparent_temperature'])}°   ·   湿度 {round(cur['relative_humidity_2m'])}%"
+           f"   ·   风 {round(cur['wind_speed_10m'])} km/h",
+           font=F("Regular", 32), fill=DARK)
     d.text((M, 558),
-           f"今日  最高 {round(daily['temperature_2m_max'][0])}°  最低 {round(daily['temperature_2m_min'][0])}°"
-           f"  ·  降水概率 {daily['precipitation_probability_max'][0] or 0}%",
-           font=F("Regular", 30), fill=DARK)
+           f"高 {round(daily['temperature_2m_max'][0])}°  /  低 {round(daily['temperature_2m_min'][0])}°"
+           f"   ·   雨 {daily['precipitation_probability_max'][0] or 0}%",
+           font=F("Regular", 32), fill=DARK)
 
     # Practical timing summary
     floor_now = now.replace(minute=0, second=0, microsecond=0, tzinfo=None)
@@ -203,12 +204,12 @@ def render(data, cfg, now):
     if next_hours:
         rain_i, rain_time = max(next_hours, key=lambda it: hourly["precipitation_probability"][it[0]] or 0)
         rain_prob = hourly["precipitation_probability"][rain_i] or 0
-        rain_text = f"未来降雨  {rain_time.strftime('%H:%M')}  {round(rain_prob)}%" if rain_prob >= 20 else "未来 24 小时降雨概率较低"
+        rain_text = f"雨  {rain_time.strftime('%H:%M')}  ·  {round(rain_prob)}%" if rain_prob >= 20 else "未来 24 小时少雨"
     else:
-        rain_text = "未来降雨  暂无逐小时数据"
+        rain_text = "暂无逐小时降雨数据"
     sunrise = daily.get("sunrise", [None])[0]
     sunset = daily.get("sunset", [None])[0]
-    sun_text = f"日出 --:--  ·  日落 --:--"
+    sun_text = "日出 --:--  ·  日落 --:--"
     if sunrise and sunset:
         sun_text = f"日出 {sunrise[-5:]}  ·  日落 {sunset[-5:]}"
     d.text((M, 632), rain_text, font=F("Regular", 32), fill=DARK)
@@ -216,8 +217,8 @@ def render(data, cfg, now):
 
     # 24-hour chart, upper right
     rx0, rx1 = 770, W - M
-    d.text((rx0, 222), "未来 24 小时", font=F("Bold", 40), fill=BLACK)
-    d.text((rx1 - 270, 232), "灰柱 = 降水概率", font=F("Regular", 26), fill=MID)
+    d.text((rx0, 222), "24 小时", font=F("Bold", 40), fill=BLACK)
+    d.text((rx1 - 300, 232), "线温度  ·  柱降水", font=F("Regular", 26), fill=MID)
     start = next((i for i, t in enumerate(hourly_times) if t >= floor_now), 0)
     idx = list(range(start, min(start + 25, len(hourly_times))))
     ts = [hourly["temperature_2m"][i] for i in idx]
@@ -255,10 +256,9 @@ def render(data, cfg, now):
         y = 656 + n * 62
         day = dt.datetime.strptime(daily["time"][i], "%Y-%m-%d")
         name = "明天" if i == 1 else f"周{WEEK[day.weekday()]}"
-        text_d, kind_d = wmo(daily["weather_code"][i])
+        _, kind_d = wmo(daily["weather_code"][i])
         d.text((rx0, y), name, font=F("Bold", 28), fill=BLACK)
-        draw_icon(d, kind_d, rx0 + 112, y + 18, 44)
-        d.text((rx0 + 145, y), text_d, font=F("Regular", 26), fill=DARK)
+        draw_icon(d, kind_d, rx0 + 122, y + 18, 44)
         lo_d, hi_d = daily["temperature_2m_min"][i], daily["temperature_2m_max"][i]
         sx = lambda v: bx0 + (bx1 - bx0) * (v - tmin) / max(tmax - tmin, 1)  # noqa: E731
         d.text((1060, y), f"{round(lo_d)}°", font=F("Regular", 28), fill=DARK)
@@ -266,7 +266,7 @@ def render(data, cfg, now):
         d.line([sx(lo_d), y + 18, sx(hi_d), y + 18], fill=DARK, width=9)
         d.text((1320, y), f"{round(hi_d)}°", font=F("Bold", 28), fill=BLACK)
 
-    d.text((M, H - 44), f"更新于 {now.strftime('%H:%M')}  ·  数据来自 Open-Meteo", font=F("Regular", 24), fill=MID)
+    d.text((M, H - 44), f"更新 {now.strftime('%H:%M')}", font=F("Regular", 24), fill=MID)
     return img
 
 
