@@ -4,5 +4,5 @@
   "latitude": 23.14,
   "longitude": 113.32,
   "timezone": "Asia/Shanghai",
-  "refresh_seconds": 1800
+  "refresh_seconds": 3600
 }

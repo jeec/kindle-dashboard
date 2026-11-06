@@ -81,7 +81,7 @@ def fetch_weather(cfg):
         "latitude": lat, "longitude": lon, "timezone": cfg["timezone"], "forecast_days": 6,
         "current": "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m",
         "hourly": "temperature_2m,precipitation_probability",
-        "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+        "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset",
     }
     data = get_json("https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode(q))
     data["_city"] = name
@@ -102,7 +102,9 @@ def demo_weather(tz):
         "hourly": {"time": times, "temperature_2m": temps, "precipitation_probability": pops},
         "daily": {"time": days, "weather_code": [2, 61, 3, 0, 95, 71],
                   "temperature_2m_max": [16, 14, 13, 18, 15, 3], "temperature_2m_min": [8, 9, 7, 10, 9, -4],
-                  "precipitation_probability_max": [20, 80, 40, 5, 70, 60]},
+                  "precipitation_probability_max": [20, 80, 40, 5, 70, 60],
+                  "sunrise": [f"{day}T06:20" for day in days],
+                  "sunset": [f"{day}T18:05" for day in days]},
     }
 
 
@@ -194,10 +196,27 @@ def render(data, cfg, now):
            f"  ·  降水概率 {daily['precipitation_probability_max'][0] or 0}%",
            font=F("Regular", 38), fill=DARK)
 
-    # 24h chart
-    d.text((M, 730), "未来 24 小时", font=F("Bold", 40), fill=BLACK)
+    # Practical timing summary: best near-term rain window and daylight hours.
     floor_now = now.replace(minute=0, second=0, microsecond=0, tzinfo=None)
-    times = [dt.datetime.strptime(t, "%Y-%m-%dT%H:%M") for t in hourly["time"]]
+    hourly_times = [dt.datetime.strptime(t, "%Y-%m-%dT%H:%M") for t in hourly["time"]]
+    next_hours = [(i, t) for i, t in enumerate(hourly_times) if floor_now <= t < floor_now + dt.timedelta(hours=24)]
+    if next_hours:
+        rain_i, rain_time = max(next_hours, key=lambda it: hourly["precipitation_probability"][it[0]] or 0)
+        rain_prob = hourly["precipitation_probability"][rain_i] or 0
+        rain_text = f"未来降雨  {rain_time.strftime('%H:%M')}  {round(rain_prob)}%" if rain_prob >= 20 else "未来 24 小时降雨概率较低"
+    else:
+        rain_text = "未来降雨  暂无逐小时数据"
+    sunrise = daily.get("sunrise", [None])[0]
+    sunset = daily.get("sunset", [None])[0]
+    sun_text = "日出日落  --:-- / --:--"
+    if sunrise and sunset:
+        sun_text = f"日出 {sunrise[-5:]}  ·  日落 {sunset[-5:]}"
+    d.text((M, 696), rain_text, font=F("Regular", 32), fill=DARK)
+    d.text((M, 734), sun_text, font=F("Regular", 32), fill=DARK)
+
+    # 24h chart
+    d.text((M, 778), "未来 24 小时", font=F("Bold", 40), fill=BLACK)
+    times = hourly_times
     start = next((i for i, t in enumerate(times) if t >= floor_now), 0)
     idx = list(range(start, min(start + 25, len(times))))
     ts = [hourly["temperature_2m"][i] for i in idx]
@@ -223,7 +242,7 @@ def render(data, cfg, now):
         label = f"{times[idx[k]].hour}时"
         f = F("Regular", 32)
         d.text((min(max(xs[k] - text_w(d, label, f) / 2, 16), W - 16 - text_w(d, label, f)), bar_base + 12), label, font=f, fill=DARK)
-    d.text((W - M - 250, 736), "灰柱 = 降水概率", font=F("Regular", 28), fill=MID)
+    d.text((W - M - 250, 784), "灰柱 = 降水概率", font=F("Regular", 28), fill=MID)
 
     # daily forecast
     d.line([M, 1128, W - M, 1128], fill=BLACK, width=4)
