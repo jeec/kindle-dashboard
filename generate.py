@@ -22,7 +22,8 @@ from zoneinfo import ZoneInfo
 
 from PIL import Image, ImageDraw, ImageFont
 
-W, H = 1448, 1072  # Kindle Paperwhite 3, 300 ppi, landscape
+W, H = 1448, 1072  # Landscape dashboard layout
+SCREEN_W, SCREEN_H = 1072, 1448  # Portrait-sized frame used by the Kindle display
 M = 64
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "site")
@@ -267,7 +268,13 @@ def render(data, cfg, now):
         d.text((1320, y), f"{round(hi_d)}°", font=F("Bold", 28), fill=BLACK)
 
     d.text((M, H - 44), f"更新于 {now.strftime('%H:%M')}  ·  数据来自 Open-Meteo", font=F("Regular", 24), fill=MID)
-    return img
+    # Keep the dashboard in landscape while preserving its aspect ratio when a
+    # portrait-only display stretches the delivered image to the screen bounds.
+    scale = min(SCREEN_W / W, SCREEN_H / H)
+    fitted = img.resize((round(W * scale), round(H * scale)), Image.Resampling.LANCZOS)
+    frame = Image.new("L", (SCREEN_W, SCREEN_H), 255)
+    frame.paste(fitted, ((SCREEN_W - fitted.width) // 2, (SCREEN_H - fitted.height) // 2))
+    return frame
 
 
 # ---------------------------------------------------------------- output
