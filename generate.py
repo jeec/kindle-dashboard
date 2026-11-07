@@ -195,14 +195,16 @@ def render(data, cfg, now):
     city = data["_city"]
 
     # Header
-    d.text((M, 42), f"{now.month}月{now.day}日", font=F("Bold", 76), fill=BLACK)
+    date_text = f"{now.month}月{now.day}日"
+    date_font = F("Bold", 76)
+    d.text((M, 42), date_text, font=date_font, fill=BLACK)
     weekday = f"星期{WEEK[now.weekday()]}"
-    weekday_font = F("Bold" if now.weekday() == 4 else "Regular", 36)
-    weekday_color = DARK if now.weekday() == 4 else MID
-    d.text((M, 132), weekday, font=weekday_font, fill=weekday_color)
-    city_x = M + text_w(d, weekday, weekday_font) + 20
-    d.text((city_x, 132), f"·  {city}", font=F("Regular", 36), fill=MID)
-    d.line([M, 194, W - M, 194], fill=BLACK, width=4)
+    weekday_font = F("Bold", 76)
+    weekday_x = M + text_w(d, date_text, date_font) + 32
+    d.text((weekday_x, 42), weekday, font=weekday_font, fill=BLACK)
+    city_x = weekday_x + text_w(d, weekday, weekday_font) + 24
+    d.text((city_x, 68), f"· {city}", font=F("Regular", 36), fill=MID)
+    d.line([M, 164, W - M, 164], fill=BLACK, width=4)
 
     # Current conditions, left column
     text, kind = wmo(cur["weather_code"])
