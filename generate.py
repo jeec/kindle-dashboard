@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 from zoneinfo import ZoneInfo
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 W, H = 1448, 1072  # Kindle Paperwhite 3, 300 ppi, landscape
 M = 64
@@ -125,6 +125,28 @@ def demo_weather(tz):
                   "sunrise": [f"{day}T06:20" for day in days],
                   "sunset": [f"{day}T18:05" for day in days]},
     }
+
+
+def is_night(daily, now):
+    """Use local sunrise/sunset timestamps to choose the night palette."""
+    try:
+        sunrise = daily["sunrise"][0]
+        sunset = daily["sunset"][0]
+        local_now = now.replace(tzinfo=None)
+
+        def parse_solar_time(value):
+            # Open-Meteo returns local ISO timestamps; accepting HH:MM keeps
+            # this helper usable with simple fixtures too.
+            if "T" in value:
+                return dt.datetime.strptime(value[:16], "%Y-%m-%dT%H:%M")
+            return dt.datetime.combine(local_now.date(), dt.datetime.strptime(value, "%H:%M").time())
+
+        rise = parse_solar_time(sunrise)
+        set_ = parse_solar_time(sunset)
+        return local_now < rise or local_now >= set_
+    except (KeyError, IndexError, TypeError, ValueError):
+        # Keep the standard daytime palette if solar data is unavailable.
+        return False
 
 
 # ---------------------------------------------------------------- drawing
@@ -300,7 +322,7 @@ def render(data, cfg, now):
     # Leave a small gutter for the Kindle/KOReader status area on the left.
     shifted = Image.new("L", (W, H), 255)
     shifted.paste(img, (3, 0))
-    return shifted
+    return ImageOps.invert(shifted) if is_night(daily, now) else shifted
 
 
 # ---------------------------------------------------------------- output
