@@ -266,7 +266,10 @@ def render(data, cfg, now):
         d.text((1320, y), f"{round(hi_d)}°", font=F("Bold", 28), fill=BLACK)
 
     d.text((M, H - 44), f"更新 {now.strftime('%H:%M')}", font=F("Regular", 24), fill=MID)
-    return img
+    # Leave a small gutter for the Kindle/KOReader status area on the left.
+    shifted = Image.new("L", (W, H), 255)
+    shifted.paste(img, (3, 0))
+    return shifted
 
 
 # ---------------------------------------------------------------- output
