@@ -279,20 +279,20 @@ def render(data, cfg, now):
     rows = list(range(1, min(6, len(daily["time"]))))
     tmin = min(daily["temperature_2m_min"][i] for i in rows)
     tmax = max(daily["temperature_2m_max"][i] for i in rows)
-    bx0, bx1 = 1150, 1300
+    bx0, bx1 = 1150, 1280
     for n, i in enumerate(rows):
-        y = 584 + n * 78
+        y = 568 + n * 88
         day = dt.datetime.strptime(daily["time"][i], "%Y-%m-%d")
         name = "明天" if i == 1 else f"周{WEEK[day.weekday()]}"
         _, kind_d = wmo(daily["weather_code"][i])
-        d.text((rx0, y), name, font=F("Bold", 32), fill=BLACK)
-        draw_icon(d, kind_d, rx0 + 130, y + 20, 48)
+        d.text((rx0, y), name, font=F("Bold", 44), fill=BLACK)
+        draw_icon(d, kind_d, rx0 + 140, y + 30, 76)
         lo_d, hi_d = daily["temperature_2m_min"][i], daily["temperature_2m_max"][i]
         sx = lambda v: bx0 + (bx1 - bx0) * (v - tmin) / max(tmax - tmin, 1)  # noqa: E731
-        d.text((1060, y), f"{round(lo_d)}°", font=F("Regular", 32), fill=DARK)
-        d.line([bx0, y + 18, bx1, y + 18], fill=PALE, width=9)
-        d.line([sx(lo_d), y + 18, sx(hi_d), y + 18], fill=DARK, width=9)
-        d.text((1320, y), f"{round(hi_d)}°", font=F("Bold", 32), fill=BLACK)
+        d.text((1045, y), f"{round(lo_d)}°", font=F("Regular", 44), fill=DARK)
+        d.line([bx0, y + 29, bx1, y + 29], fill=PALE, width=14)
+        d.line([sx(lo_d), y + 29, sx(hi_d), y + 29], fill=DARK, width=14)
+        d.text((1295, y), f"{round(hi_d)}°", font=F("Bold", 44), fill=BLACK)
 
     d.text((M, H - 44), f"更新 {now.strftime('%H:%M')}", font=F("Regular", 24), fill=MID)
     # Leave a small gutter for the Kindle/KOReader status area on the left.
