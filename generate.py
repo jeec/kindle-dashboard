@@ -177,7 +177,12 @@ def render(data, cfg, now):
 
     # Header
     d.text((M, 42), f"{now.month}月{now.day}日", font=F("Bold", 76), fill=BLACK)
-    d.text((M, 132), f"星期{WEEK[now.weekday()]}  ·  {city}", font=F("Regular", 36), fill=MID)
+    weekday = f"星期{WEEK[now.weekday()]}"
+    weekday_font = F("Bold" if now.weekday() == 4 else "Regular", 36)
+    weekday_color = DARK if now.weekday() == 4 else MID
+    d.text((M, 132), weekday, font=weekday_font, fill=weekday_color)
+    city_x = M + text_w(d, weekday, weekday_font) + 20
+    d.text((city_x, 132), f"·  {city}", font=F("Regular", 36), fill=MID)
     d.line([M, 194, W - M, 194], fill=BLACK, width=4)
 
     # Current conditions, left column
@@ -186,15 +191,13 @@ def render(data, cfg, now):
     temp = f"{round(cur['temperature_2m'])}°"
     f_temp = F("Bold", 190)
     d.text((410, 245), temp, font=f_temp, fill=BLACK)
-    x2 = 410 + text_w(d, temp, f_temp) + 24
-    d.text((x2, 330), text, font=F("Bold", 52), fill=BLACK)
-    d.text((M, 500),
-           f"体感 {round(cur['apparent_temperature'])}°   ·   湿度 {round(cur['relative_humidity_2m'])}%"
-           f"   ·   风 {round(cur['wind_speed_10m'])} km/h",
+    d.text((410, 470), text, font=F("Bold", 34), fill=DARK)
+    d.text((M, 532),
+           f"体感 {round(cur['apparent_temperature'])}°  ·  风 {round(cur['wind_speed_10m'])} km/h",
            font=F("Regular", 32), fill=DARK)
-    d.text((M, 558),
-           f"高 {round(daily['temperature_2m_max'][0])}°  /  低 {round(daily['temperature_2m_min'][0])}°"
-           f"   ·   雨 {daily['precipitation_probability_max'][0] or 0}%",
+    d.text((M, 582),
+           f"今日 {round(daily['temperature_2m_min'][0])}°–{round(daily['temperature_2m_max'][0])}°"
+           f"  ·  雨 {daily['precipitation_probability_max'][0] or 0}%",
            font=F("Regular", 32), fill=DARK)
 
     # Practical timing summary
@@ -204,31 +207,28 @@ def render(data, cfg, now):
     if next_hours:
         rain_i, rain_time = max(next_hours, key=lambda it: hourly["precipitation_probability"][it[0]] or 0)
         rain_prob = hourly["precipitation_probability"][rain_i] or 0
-        rain_text = f"雨  {rain_time.strftime('%H:%M')}  ·  {round(rain_prob)}%" if rain_prob >= 20 else "未来 24 小时少雨"
+        rain_text = f"雨峰 {rain_time.strftime('%H')}时 {round(rain_prob)}%" if rain_prob >= 20 else "少雨"
     else:
-        rain_text = "暂无逐小时降雨数据"
+        rain_text = "暂无降雨数据"
     sunrise = daily.get("sunrise", [None])[0]
     sunset = daily.get("sunset", [None])[0]
     sun_text = "日出 --:--  ·  日落 --:--"
     if sunrise and sunset:
         sun_text = f"日出 {sunrise[-5:]}  ·  日落 {sunset[-5:]}"
-    d.text((M, 632), rain_text, font=F("Regular", 32), fill=DARK)
-    d.text((M, 690), sun_text, font=F("Regular", 32), fill=DARK)
+    d.text((M, 632), f"{rain_text}  ·  {sun_text}", font=F("Regular", 26), fill=DARK)
 
     # 24-hour chart, upper right
     rx0, rx1 = 770, W - M
-    d.text((rx0, 222), "24 小时", font=F("Bold", 40), fill=BLACK)
-    d.text((rx1 - 300, 232), "线温度  ·  柱降水", font=F("Regular", 26), fill=MID)
     start = next((i for i, t in enumerate(hourly_times) if t >= floor_now), 0)
     idx = list(range(start, min(start + 25, len(hourly_times))))
     ts = [hourly["temperature_2m"][i] for i in idx]
     ps = [hourly["precipitation_probability"][i] or 0 for i in idx]
-    cx0, cx1, cy0, cy1 = rx0 + 12, rx1 - 12, 320, 450
+    cx0, cx1, cy0, cy1 = rx0 + 12, rx1 - 12, 270, 405
     lo, hi = min(ts), max(ts)
     span = max(hi - lo, 4)
     xs = [cx0 + (cx1 - cx0) * k / max(len(idx) - 1, 1) for k in range(len(idx))]
     ys = [cy1 - (cy1 - cy0) * (t - lo) / span for t in ts]
-    bar_base, bar_h = 510, 52
+    bar_base, bar_h = 465, 48
     for k, p in enumerate(ps):
         h = bar_h * p / 100
         d.rectangle([xs[k] - 9, bar_base - h, xs[k] + 9, bar_base], fill=LIGHT)
@@ -242,18 +242,17 @@ def render(data, cfg, now):
         d.text((min(max(xs[k] - text_w(d, label, f) / 2, rx0), rx1 - 54), ty), label, font=f, fill=BLACK)
     for k in range(0, len(idx), 6):
         label = f"{hourly_times[idx[k]].hour}时"
-        f = F("Regular", 26)
+        f = F("Regular", 24)
         d.text((min(max(xs[k] - text_w(d, label, f) / 2, rx0), rx1 - text_w(d, label, f)), bar_base + 8), label, font=f, fill=DARK)
 
     # Five-day forecast, lower right
-    d.line([rx0, 592, rx1, 592], fill=BLACK, width=3)
-    d.text((rx0, 606), "未来 5 天", font=F("Bold", 34), fill=BLACK)
+    d.line([rx0, 540, rx1, 540], fill=BLACK, width=3)
     rows = list(range(1, min(6, len(daily["time"]))))
     tmin = min(daily["temperature_2m_min"][i] for i in rows)
     tmax = max(daily["temperature_2m_max"][i] for i in rows)
     bx0, bx1 = 1150, 1300
     for n, i in enumerate(rows):
-        y = 656 + n * 62
+        y = 584 + n * 78
         day = dt.datetime.strptime(daily["time"][i], "%Y-%m-%d")
         name = "明天" if i == 1 else f"周{WEEK[day.weekday()]}"
         _, kind_d = wmo(daily["weather_code"][i])
