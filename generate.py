@@ -49,6 +49,25 @@ def wmo(code):
     return WMO.get(int(code), ("未知", "cloud"))
 
 
+def feels_like_label(temperature):
+    """Turn apparent temperature into a short, at-a-glance comfort label."""
+    if temperature >= 35:
+        return "酷热"
+    if temperature >= 30:
+        return "炎热"
+    if temperature >= 25:
+        return "偏热"
+    if temperature >= 20:
+        return "舒适"
+    if temperature >= 15:
+        return "微凉"
+    if temperature >= 10:
+        return "偏凉"
+    if temperature >= 5:
+        return "冷"
+    return "寒冷"
+
+
 # ---------------------------------------------------------------- data
 def get_json(url, tries=3):
     last = None
@@ -191,13 +210,12 @@ def render(data, cfg, now):
     temp = f"{round(cur['temperature_2m'])}°"
     f_temp = F("Bold", 190)
     d.text((410, 245), temp, font=f_temp, fill=BLACK)
-    d.text((410, 470), text, font=F("Bold", 34), fill=DARK)
-    d.text((M, 532),
-           f"体感 {round(cur['apparent_temperature'])}°  ·  风 {round(cur['wind_speed_10m'])} km/h",
-           font=F("Regular", 32), fill=DARK)
-    d.text((M, 582),
-           f"今日 {round(daily['temperature_2m_min'][0])}°–{round(daily['temperature_2m_max'][0])}°"
-           f"  ·  雨 {daily['precipitation_probability_max'][0] or 0}%",
+    d.text((410, 470), text, font=F("Bold", 38), fill=DARK)
+    feels_text = feels_like_label(cur["apparent_temperature"])
+    f_callout = F("Bold", 76)
+    d.text((M, 526), feels_text, font=f_callout, fill=DARK)
+    wind_x = M + text_w(d, feels_text, f_callout) + 24
+    d.text((wind_x, 584), f"风 {round(cur['wind_speed_10m'])} km/h",
            font=F("Regular", 32), fill=DARK)
 
     # Practical timing summary
@@ -207,15 +225,26 @@ def render(data, cfg, now):
     if next_hours:
         rain_i, rain_time = max(next_hours, key=lambda it: hourly["precipitation_probability"][it[0]] or 0)
         rain_prob = hourly["precipitation_probability"][rain_i] or 0
-        rain_text = f"雨峰 {rain_time.strftime('%H')}时 {round(rain_prob)}%" if rain_prob >= 20 else "少雨"
+        if rain_prob >= 60:
+            rain_advice = "建议带伞"
+        elif rain_prob >= 30:
+            rain_advice = "备伞更稳妥"
+        else:
+            rain_advice = "降雨可能性低"
+        rain_detail = f"降雨概率 {rain_time.strftime('%H:%M')} · {round(rain_prob)}%"
     else:
-        rain_text = "暂无降雨数据"
+        rain_advice = "暂无降雨数据"
+        rain_detail = ""
     sunrise = daily.get("sunrise", [None])[0]
     sunset = daily.get("sunset", [None])[0]
     sun_text = "日出 --:--  ·  日落 --:--"
     if sunrise and sunset:
         sun_text = f"日出 {sunrise[-5:]}  ·  日落 {sunset[-5:]}"
-    d.text((M, 632), f"{rain_text}  ·  {sun_text}", font=F("Regular", 26), fill=DARK)
+    d.text((M, 664), rain_advice, font=f_callout, fill=DARK)
+    if rain_detail:
+        d.text((M, 756), rain_detail,
+               font=F("Regular", 28), fill=MID)
+    d.text((M, 816), sun_text, font=F("Regular", 32), fill=DARK)
 
     # 24-hour chart, upper right
     rx0, rx1 = 770, W - M
@@ -237,12 +266,12 @@ def render(data, cfg, now):
     for k in set((ts.index(hi), ts.index(lo))):
         d.ellipse([xs[k] - 7, ys[k] - 7, xs[k] + 7, ys[k] + 7], fill=BLACK)
         label = f"{round(ts[k])}°"
-        f = F("Bold", 30)
-        ty = ys[k] - 42 if k == ts.index(hi) else ys[k] + 10
+        f = F("Bold", 34)
+        ty = ys[k] - 52 if k == ts.index(hi) else ys[k] + 10
         d.text((min(max(xs[k] - text_w(d, label, f) / 2, rx0), rx1 - 54), ty), label, font=f, fill=BLACK)
     for k in range(0, len(idx), 6):
         label = f"{hourly_times[idx[k]].hour}时"
-        f = F("Regular", 24)
+        f = F("Regular", 28)
         d.text((min(max(xs[k] - text_w(d, label, f) / 2, rx0), rx1 - text_w(d, label, f)), bar_base + 8), label, font=f, fill=DARK)
 
     # Five-day forecast, lower right
@@ -256,14 +285,14 @@ def render(data, cfg, now):
         day = dt.datetime.strptime(daily["time"][i], "%Y-%m-%d")
         name = "明天" if i == 1 else f"周{WEEK[day.weekday()]}"
         _, kind_d = wmo(daily["weather_code"][i])
-        d.text((rx0, y), name, font=F("Bold", 28), fill=BLACK)
-        draw_icon(d, kind_d, rx0 + 122, y + 18, 44)
+        d.text((rx0, y), name, font=F("Bold", 32), fill=BLACK)
+        draw_icon(d, kind_d, rx0 + 130, y + 20, 48)
         lo_d, hi_d = daily["temperature_2m_min"][i], daily["temperature_2m_max"][i]
         sx = lambda v: bx0 + (bx1 - bx0) * (v - tmin) / max(tmax - tmin, 1)  # noqa: E731
-        d.text((1060, y), f"{round(lo_d)}°", font=F("Regular", 28), fill=DARK)
+        d.text((1060, y), f"{round(lo_d)}°", font=F("Regular", 32), fill=DARK)
         d.line([bx0, y + 18, bx1, y + 18], fill=PALE, width=9)
         d.line([sx(lo_d), y + 18, sx(hi_d), y + 18], fill=DARK, width=9)
-        d.text((1320, y), f"{round(hi_d)}°", font=F("Bold", 28), fill=BLACK)
+        d.text((1320, y), f"{round(hi_d)}°", font=F("Bold", 32), fill=BLACK)
 
     d.text((M, H - 44), f"更新 {now.strftime('%H:%M')}", font=F("Regular", 24), fill=MID)
     # Leave a small gutter for the Kindle/KOReader status area on the left.
