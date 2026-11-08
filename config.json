@@ -1,8 +1,8 @@
 {
-  "city": "广州·天河石牌桥",
+  "city": "广州·天河区石牌",
   "country_code": "CN",
-  "latitude": 23.14,
-  "longitude": 113.32,
+  "latitude": 23.136796,
+  "longitude": 113.327037,
   "timezone": "Asia/Shanghai",
   "refresh_seconds": 3600
 }
