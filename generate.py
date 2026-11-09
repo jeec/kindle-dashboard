@@ -68,6 +68,27 @@ def feels_like_label(temperature):
     return "寒冷"
 
 
+def wind_feel_label(speed_kmh):
+    """Describe wind speed with a short, readable Chinese label."""
+    if speed_kmh < 1:
+        return "静风"
+    if speed_kmh < 6:
+        return "轻风"
+    if speed_kmh < 12:
+        return "微风"
+    if speed_kmh < 20:
+        return "和风"
+    if speed_kmh < 29:
+        return "清劲风"
+    if speed_kmh < 39:
+        return "强风"
+    if speed_kmh < 50:
+        return "大风"
+    if speed_kmh < 62:
+        return "烈风"
+    return "狂风"
+
+
 # ---------------------------------------------------------------- data
 def get_json(url, tries=3):
     last = None
@@ -237,10 +258,8 @@ def render(data, cfg, now):
     d.text((410, 470), text, font=F("Bold", 38), fill=DARK)
     feels_text = feels_like_label(cur["apparent_temperature"])
     f_callout = F("Bold", 76)
-    d.text((M, 526), feels_text, font=f_callout, fill=DARK)
-    wind_x = M + text_w(d, feels_text, f_callout) + 24
-    d.text((wind_x, 584), f"风 {round(cur['wind_speed_10m'])} km/h",
-           font=F("Regular", 32), fill=DARK)
+    wind_text = wind_feel_label(cur["wind_speed_10m"])
+    d.text((M, 526), f"{feels_text} · {wind_text}", font=f_callout, fill=DARK)
 
     # Practical timing summary
     floor_now = now.replace(minute=0, second=0, microsecond=0, tzinfo=None)
@@ -290,7 +309,7 @@ def render(data, cfg, now):
     for k in set((ts.index(hi), ts.index(lo))):
         d.ellipse([xs[k] - 7, ys[k] - 7, xs[k] + 7, ys[k] + 7], fill=BLACK)
         label = f"{round(ts[k])}°"
-        f = F("Bold", 34)
+        f = F("Bold", 37)
         ty = ys[k] - 52 if k == ts.index(hi) else ys[k] + 10
         d.text((min(max(xs[k] - text_w(d, label, f) / 2, rx0), rx1 - 54), ty), label, font=f, fill=BLACK)
     for k in range(0, len(idx), 6):
