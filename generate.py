@@ -255,11 +255,18 @@ def render(data, cfg, now):
     temp = f"{round(cur['temperature_2m'])}°"
     f_temp = F("Bold", 190)
     d.text((410, 245), temp, font=f_temp, fill=BLACK)
-    d.text((410, 470), text, font=F("Bold", 38), fill=DARK)
+    f_condition = F("Bold", 38)
+    d.text((410, 470), text, font=f_condition, fill=DARK)
+    feel_x = 410 + text_w(d, text, f_condition) + 24
+    f_feel_label = F("Regular", 32)
+    d.text((feel_x, 478), "体感", font=f_feel_label, fill=MID)
+    feel_temp_x = feel_x + text_w(d, "体感", f_feel_label) + 10
+    d.text((feel_temp_x, 460), f"{round(cur['apparent_temperature'])}°",
+           font=F("Bold", 50), fill=BLACK)
     feels_text = feels_like_label(cur["apparent_temperature"])
     f_callout = F("Bold", 76)
     wind_text = wind_feel_label(cur["wind_speed_10m"])
-    d.text((M, 526), f"{feels_text} · {wind_text}", font=f_callout, fill=DARK)
+    d.text((M, 548), f"{feels_text} · {wind_text}", font=f_callout, fill=DARK)
 
     # Practical timing summary
     floor_now = now.replace(minute=0, second=0, microsecond=0, tzinfo=None)
@@ -314,7 +321,7 @@ def render(data, cfg, now):
         d.text((min(max(xs[k] - text_w(d, label, f) / 2, rx0), rx1 - 54), ty), label, font=f, fill=BLACK)
     for k in range(0, len(idx), 6):
         label = f"{hourly_times[idx[k]].hour}时"
-        f = F("Regular", 28)
+        f = F("Bold", 36)
         d.text((min(max(xs[k] - text_w(d, label, f) / 2, rx0), rx1 - text_w(d, label, f)), bar_base + 8), label, font=f, fill=DARK)
 
     # Five-day forecast, lower right
