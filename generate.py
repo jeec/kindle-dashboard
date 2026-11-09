@@ -26,67 +26,67 @@ W, H = 1448, 1072  # Kindle Paperwhite 3, 300 ppi, landscape
 M = 64
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "site")
-WEEK = "一二三四五六日"
+WEEK = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 FONT_DIRS = ["/usr/share/fonts/opentype/noto", "/usr/share/fonts/truetype/noto"]
 BLACK, DARK, MID, LIGHT, PALE = 0, 70, 130, 200, 232
 
 WMO = {
-    0: ("晴", "sun"), 1: ("大部晴朗", "sun"), 2: ("多云", "partly"), 3: ("阴", "cloud"),
-    45: ("雾", "fog"), 48: ("冻雾", "fog"),
-    51: ("小毛毛雨", "rain"), 53: ("毛毛雨", "rain"), 55: ("大毛毛雨", "rain"),
-    56: ("冻毛毛雨", "rain"), 57: ("冻毛毛雨", "rain"),
-    61: ("小雨", "rain"), 63: ("中雨", "rain"), 65: ("大雨", "rain"),
-    66: ("冻雨", "rain"), 67: ("冻雨", "rain"),
-    71: ("小雪", "snow"), 73: ("中雪", "snow"), 75: ("大雪", "snow"), 77: ("雪粒", "snow"),
-    80: ("小阵雨", "rain"), 81: ("阵雨", "rain"), 82: ("强阵雨", "rain"),
-    85: ("小阵雪", "snow"), 86: ("大阵雪", "snow"),
-    95: ("雷暴", "storm"), 96: ("雷暴冰雹", "storm"), 99: ("强雷暴冰雹", "storm"),
+    0: ("Clear", "sun"), 1: ("Mostly clear", "sun"), 2: ("Partly cloudy", "partly"), 3: ("Overcast", "cloud"),
+    45: ("Fog", "fog"), 48: ("Freezing fog", "fog"),
+    51: ("Light drizzle", "rain"), 53: ("Drizzle", "rain"), 55: ("Heavy drizzle", "rain"),
+    56: ("Freezing drizzle", "rain"), 57: ("Freezing drizzle", "rain"),
+    61: ("Light rain", "rain"), 63: ("Rain", "rain"), 65: ("Heavy rain", "rain"),
+    66: ("Freezing rain", "rain"), 67: ("Freezing rain", "rain"),
+    71: ("Light snow", "snow"), 73: ("Snow", "snow"), 75: ("Heavy snow", "snow"), 77: ("Snow grains", "snow"),
+    80: ("Rain showers", "rain"), 81: ("Showers", "rain"), 82: ("Heavy showers", "rain"),
+    85: ("Snow showers", "snow"), 86: ("Heavy snow showers", "snow"),
+    95: ("Thunderstorm", "storm"), 96: ("Hailstorm", "storm"), 99: ("Severe storm", "storm"),
 }
 
 
 def wmo(code):
-    return WMO.get(int(code), ("未知", "cloud"))
+    return WMO.get(int(code), ("Unknown", "cloud"))
 
 
 def feels_like_label(temperature):
     """Turn apparent temperature into a short, at-a-glance comfort label."""
     if temperature >= 35:
-        return "酷热"
+        return "Very hot"
     if temperature >= 30:
-        return "炎热"
+        return "Hot"
     if temperature >= 25:
-        return "偏热"
+        return "Warm"
     if temperature >= 20:
-        return "舒适"
+        return "Comfortable"
     if temperature >= 15:
-        return "微凉"
+        return "Cool"
     if temperature >= 10:
-        return "偏凉"
+        return "Chilly"
     if temperature >= 5:
-        return "冷"
-    return "寒冷"
+        return "Cold"
+    return "Freezing"
 
 
 def wind_feel_label(speed_kmh):
-    """Describe wind speed with a short, readable Chinese label."""
+    """Describe wind speed with a short, readable English label."""
     if speed_kmh < 1:
-        return "静风"
+        return "Calm"
     if speed_kmh < 6:
-        return "轻风"
+        return "Light"
     if speed_kmh < 12:
-        return "微风"
+        return "Breezy"
     if speed_kmh < 20:
-        return "和风"
+        return "Moderate"
     if speed_kmh < 29:
-        return "清劲风"
+        return "Fresh"
     if speed_kmh < 39:
-        return "强风"
+        return "Strong"
     if speed_kmh < 50:
-        return "大风"
+        return "Very strong"
     if speed_kmh < 62:
-        return "烈风"
-    return "狂风"
+        return "Gale"
+    return "Severe"
 
 
 # ---------------------------------------------------------------- data
@@ -105,7 +105,7 @@ def get_json(url, tries=3):
 def locate(cfg):
     if cfg.get("latitude") is not None and cfg.get("longitude") is not None:
         return float(cfg["latitude"]), float(cfg["longitude"]), cfg.get("city", "")
-    q = {"name": cfg["city"], "count": 1, "language": "zh", "format": "json"}
+    q = {"name": cfg["city"], "count": 1, "language": "en", "format": "json"}
     if cfg.get("country_code"):
         q["countryCode"] = cfg["country_code"]
     res = get_json("https://geocoding-api.open-meteo.com/v1/search?" + urllib.parse.urlencode(q))
@@ -136,7 +136,7 @@ def demo_weather(tz):
     pops = [max(0, int(50 * math.sin(i / 7.0))) for i in range(24 * 6)]
     days = [(start + dt.timedelta(days=i)).strftime("%Y-%m-%d") for i in range(6)]
     return {
-        "_city": "示例城市",
+        "_city": "Example City",
         "current": {"temperature_2m": 12.4, "apparent_temperature": 10.8, "relative_humidity_2m": 68,
                     "weather_code": 2, "wind_speed_10m": 11.2},
         "hourly": {"time": times, "temperature_2m": temps, "precipitation_probability": pops},
@@ -238,10 +238,10 @@ def render(data, cfg, now):
     city = data["_city"]
 
     # Header
-    date_text = f"{now.month}月{now.day}日"
+    date_text = f"{now.strftime('%b')} {now.day}"
     date_font = F("Bold", 76)
     d.text((M, 42), date_text, font=date_font, fill=BLACK)
-    weekday = f"星期{WEEK[now.weekday()]}"
+    weekday = WEEK[now.weekday()]
     weekday_font = F("Bold", 76)
     weekday_x = M + text_w(d, date_text, date_font) + 32
     d.text((weekday_x, 42), weekday, font=weekday_font, fill=BLACK)
@@ -256,17 +256,18 @@ def render(data, cfg, now):
     f_temp = F("Bold", 190)
     d.text((410, 245), temp, font=f_temp, fill=BLACK)
     f_condition = F("Bold", 38)
-    d.text((410, 470), text, font=f_condition, fill=DARK)
-    feel_x = 410 + text_w(d, text, f_condition) + 24
-    f_feel_label = F("Regular", 32)
-    d.text((feel_x, 478), "体感", font=f_feel_label, fill=MID)
-    feel_temp_x = feel_x + text_w(d, "体感", f_feel_label) + 10
-    d.text((feel_temp_x, 460), f"{round(cur['apparent_temperature'])}°",
-           font=F("Bold", 50), fill=BLACK)
+    d.text((410, 458), text, font=f_condition, fill=DARK)
+    d.text((410, 505), f"Feels like {round(cur['apparent_temperature'])}°",
+           font=F("Regular", 32), fill=MID)
     feels_text = feels_like_label(cur["apparent_temperature"])
-    f_callout = F("Bold", 76)
     wind_text = wind_feel_label(cur["wind_speed_10m"])
-    d.text((M, 548), f"{feels_text} · {wind_text}", font=f_callout, fill=DARK)
+    callout = f"{feels_text} · {wind_text}"
+    callout_size = 76
+    f_callout = F("Bold", callout_size)
+    while text_w(d, callout, f_callout) > 680 and callout_size > 54:
+        callout_size -= 2
+        f_callout = F("Bold", callout_size)
+    d.text((M, 558), callout, font=f_callout, fill=DARK)
 
     # Practical timing summary
     floor_now = now.replace(minute=0, second=0, microsecond=0, tzinfo=None)
@@ -276,21 +277,24 @@ def render(data, cfg, now):
         rain_i, rain_time = max(next_hours, key=lambda it: hourly["precipitation_probability"][it[0]] or 0)
         rain_prob = hourly["precipitation_probability"][rain_i] or 0
         if rain_prob >= 60:
-            rain_advice = "建议带伞"
+            rain_advice = "Bring an umbrella"
         elif rain_prob >= 30:
-            rain_advice = "备伞更稳妥"
+            rain_advice = "Pack an umbrella"
         else:
-            rain_advice = "降雨可能性低"
-        rain_detail = f"降雨概率 {rain_time.strftime('%H:%M')} · {round(rain_prob)}%"
+            rain_advice = "Low rain chance"
+        rain_detail = f"Rain chance at {rain_time.strftime('%H:%M')} · {round(rain_prob)}%"
     else:
-        rain_advice = "暂无降雨数据"
+        rain_advice = "No rain data"
         rain_detail = ""
     sunrise = daily.get("sunrise", [None])[0]
     sunset = daily.get("sunset", [None])[0]
-    sun_text = "日出 --:--  ·  日落 --:--"
+    sun_text = "Sunrise --:--  ·  Sunset --:--"
     if sunrise and sunset:
-        sun_text = f"日出 {sunrise[-5:]}  ·  日落 {sunset[-5:]}"
-    d.text((M, 664), rain_advice, font=f_callout, fill=DARK)
+        sun_text = f"Sunrise {sunrise[-5:]}  ·  Sunset {sunset[-5:]}"
+    f_advice = F("Bold", 76)
+    while text_w(d, rain_advice, f_advice) > 680 and f_advice.size > 54:
+        f_advice = F("Bold", f_advice.size - 2)
+    d.text((M, 664), rain_advice, font=f_advice, fill=DARK)
     if rain_detail:
         d.text((M, 756), rain_detail,
                font=F("Regular", 28), fill=MID)
@@ -320,8 +324,8 @@ def render(data, cfg, now):
         ty = ys[k] - 52 if k == ts.index(hi) else ys[k] + 10
         d.text((min(max(xs[k] - text_w(d, label, f) / 2, rx0), rx1 - 54), ty), label, font=f, fill=BLACK)
     for k in range(0, len(idx), 6):
-        label = f"{hourly_times[idx[k]].hour}时"
-        f = F("Bold", 36)
+        label = hourly_times[idx[k]].strftime("%I %p").lstrip("0")
+        f = F("Bold", 32)
         d.text((min(max(xs[k] - text_w(d, label, f) / 2, rx0), rx1 - text_w(d, label, f)), bar_base + 8), label, font=f, fill=DARK)
 
     # Five-day forecast, lower right
@@ -329,22 +333,22 @@ def render(data, cfg, now):
     rows = list(range(1, min(6, len(daily["time"]))))
     tmin = min(daily["temperature_2m_min"][i] for i in rows)
     tmax = max(daily["temperature_2m_max"][i] for i in rows)
-    bx0, bx1 = 1150, 1280
+    bx0, bx1 = 1135, 1285
     for n, i in enumerate(rows):
         y = 568 + n * 88
         day = dt.datetime.strptime(daily["time"][i], "%Y-%m-%d")
-        name = "明天" if i == 1 else f"周{WEEK[day.weekday()]}"
+        name = "Tmr" if i == 1 else WEEK[day.weekday()]
         _, kind_d = wmo(daily["weather_code"][i])
-        d.text((rx0, y), name, font=F("Bold", 44), fill=BLACK)
-        draw_icon(d, kind_d, rx0 + 140, y + 30, 76)
+        d.text((rx0, y), name, font=F("Bold", 36 if i == 1 else 44), fill=BLACK)
+        draw_icon(d, kind_d, rx0 + 160, y + 30, 76)
         lo_d, hi_d = daily["temperature_2m_min"][i], daily["temperature_2m_max"][i]
         sx = lambda v: bx0 + (bx1 - bx0) * (v - tmin) / max(tmax - tmin, 1)  # noqa: E731
-        d.text((1045, y), f"{round(lo_d)}°", font=F("Regular", 44), fill=DARK)
+        d.text((1025, y), f"{round(lo_d)}°", font=F("Regular", 44), fill=DARK)
         d.line([bx0, y + 29, bx1, y + 29], fill=PALE, width=14)
         d.line([sx(lo_d), y + 29, sx(hi_d), y + 29], fill=DARK, width=14)
         d.text((1295, y), f"{round(hi_d)}°", font=F("Bold", 44), fill=BLACK)
 
-    d.text((M, H - 44), f"更新 {now.strftime('%H:%M')}", font=F("Regular", 24), fill=MID)
+    d.text((M, H - 44), f"Updated {now.strftime('%H:%M')}", font=F("Regular", 24), fill=MID)
     # Leave a small gutter for the Kindle/KOReader status area on the left.
     shifted = Image.new("L", (W, H), 255)
     shifted.paste(img, (3, 0))
