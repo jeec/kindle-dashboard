@@ -257,8 +257,12 @@ def render(data, cfg, now):
     d.text((410, 245), temp, font=f_temp, fill=BLACK)
     f_condition = F("Bold", 38)
     d.text((410, 458), text, font=f_condition, fill=DARK)
-    d.text((410, 505), f"Feels like {round(cur['apparent_temperature'])}°",
-           font=F("Regular", 32), fill=MID)
+    f_feels_label = F("Regular", 30)
+    feels_label = "Feels like"
+    d.text((410, 511), feels_label, font=f_feels_label, fill=MID)
+    feels_temp_x = 410 + text_w(d, feels_label, f_feels_label) + 12
+    d.text((feels_temp_x, 491), f"{round(cur['apparent_temperature'])}°",
+           font=F("Bold", 54), fill=BLACK)
     feels_text = feels_like_label(cur["apparent_temperature"])
     wind_text = wind_feel_label(cur["wind_speed_10m"])
     callout = f"{feels_text} · {wind_text}"
@@ -339,7 +343,7 @@ def render(data, cfg, now):
         day = dt.datetime.strptime(daily["time"][i], "%Y-%m-%d")
         name = "Tmr" if i == 1 else WEEK[day.weekday()]
         _, kind_d = wmo(daily["weather_code"][i])
-        d.text((rx0, y), name, font=F("Bold", 36 if i == 1 else 44), fill=BLACK)
+        d.text((rx0, y), name, font=F("Bold", 44), fill=BLACK)
         draw_icon(d, kind_d, rx0 + 160, y + 30, 76)
         lo_d, hi_d = daily["temperature_2m_min"][i], daily["temperature_2m_max"][i]
         sx = lambda v: bx0 + (bx1 - bx0) * (v - tmin) / max(tmax - tmin, 1)  # noqa: E731
